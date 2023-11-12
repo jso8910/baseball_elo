@@ -1,0 +1,6 @@
+weights_averages/
+data/
+downloads/
+venv/
+__pycache__/
+*.csv
