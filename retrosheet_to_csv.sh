@@ -7,8 +7,6 @@ if [ ! -d downloads ]; then
     exit 1;
 fi
 
-# rm -rf downloads/*.ROS
-# rm -rf downloads/*.EDN
 mkdir -p data
 pushd downloads/retrosheet
 # Removed *.EVE because that's generally playoffs
@@ -20,4 +18,4 @@ for filename in *.EVN *.EVA; do
     echo $filename
 done
 popd
-mkdir -p weights_averages
+mkdir -p weights_averages monthly_elo_data/{hitter,pitcher} yearly_elo_data/{hitter,pitcher}

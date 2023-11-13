@@ -1,7 +1,9 @@
 import argparse
 import csv
+import datetime
 import os
 import sys
+from copy import deepcopy
 
 import pandas as pd
 import tqdm
@@ -31,7 +33,7 @@ def evaluate_elo(plays):
     batter_elos = [
         [
             "batter",
-            "end of career elo",
+            "end of period elo",
             "peak elo",
             "peak elo gameid",
             "lowest elo",
@@ -42,7 +44,7 @@ def evaluate_elo(plays):
     pitcher_elos = [
         [
             "pitcher",
-            "end of career elo",
+            "end of period elo",
             "peak elo",
             "peak elo gameid",
             "lowest elo",
@@ -53,12 +55,30 @@ def evaluate_elo(plays):
     batters = ["header NOT FOR USE"]
     pitchers = ["header nOT FOR USE"]
 
+    month_batter_elos = {}
+    month_pitcher_elos = {}
+    start_of_year_batter_elos = {}
+    start_of_year_pitcher_elos = {}
+
     for _, play in tqdm.tqdm(plays.iterrows(), total=plays.shape[0]):
         if int(play["EVENT_CD"]) not in event_code_to_event:
             continue
         event = int(play["EVENT_CD"])
         batter = play["BAT_ID"]
         pitcher = play["PIT_ID"]
+
+        # Save things as they were as of that month
+        if (
+            play["date"].day == 1
+            and play["date"].strftime("%Y%m%d") not in month_batter_elos
+        ):
+            month_batter_elos[play["date"].strftime("%Y%m%d")] = deepcopy(batter_elos)
+            month_pitcher_elos[play["date"].strftime("%Y%m%d")] = deepcopy(pitcher_elos)
+
+        # Save things as they were at the start of the year
+        if play["date"].year not in start_of_year_batter_elos:
+            start_of_year_batter_elos[play["date"].year] = deepcopy(batter_elos)
+            start_of_year_pitcher_elos[play["date"].year] = deepcopy(pitcher_elos)
 
         # Define the default (and thus average) ELO to be 1000
         if not batter in batters:
@@ -108,7 +128,14 @@ def evaluate_elo(plays):
 
         batter_elos[batter_index][6] += 1
         pitcher_elos[pitcher_index][6] += 1
-    return batter_elos, pitcher_elos
+    return (
+        batter_elos,
+        pitcher_elos,
+        month_batter_elos,
+        month_pitcher_elos,
+        start_of_year_batter_elos,
+        start_of_year_pitcher_elos,
+    )
 
 
 def main(start_year: int, end_year: int):
@@ -155,15 +182,56 @@ def main(start_year: int, end_year: int):
         del reader
     plays = pd.concat(years)  # type: ignore
     del years
-    hitter_elo, pitcher_elo = evaluate_elo(plays)
+    plays["date"] = plays["GAME_ID"].apply(
+        lambda x: datetime.datetime.fromisoformat(x[3:-1])
+    )
+    plays.sort_values("date", ascending=True)
+    # plays = sorted(plays, key=lambda x: x["GAME_ID"][3:])
+    (
+        batter_elos,
+        pitcher_elos,
+        month_batter_elos,
+        month_pitcher_elos,
+        start_of_year_batter_elos,
+        start_of_year_pitcher_elos,
+    ) = evaluate_elo(plays)
     with open("pitcher_elo.csv", "w") as f:
         writer = csv.writer(f)
-        writer.writerows(pitcher_elo)
+        writer.writerows(pitcher_elos)
     with open("hitter_elo.csv", "w") as f:
         writer = csv.writer(f)
-        writer.writerows(hitter_elo)
-    # pitcher_elo.to_csv("pitcher_elo.csv", index=False)
-    # hitter_elo.to_csv("hitter_elo.csv", index=False)
+        writer.writerows(batter_elos)
+
+    for directory in [
+        "monthly_elo_data/hitter/",
+        "monthly_elo_data/pitcher/",
+        "yearly_elo_data/hitter/",
+        "yearly_elo_data/pitcher/",
+    ]:
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        for filename in os.listdir(directory):
+            os.remove(directory + filename)
+
+    for key, val in month_batter_elos.items():
+        with open(f"monthly_elo_data/hitter/{key}.csv", "w") as f:
+            writer = csv.writer(f)
+            writer.writerows(val)
+
+    for key, val in month_pitcher_elos.items():
+        with open(f"monthly_elo_data/pitcher/{key}.csv", "w") as f:
+            writer = csv.writer(f)
+            writer.writerows(val)
+
+    for key, val in start_of_year_batter_elos.items():
+        with open(f"yearly_elo_data/hitter/{key}.csv", "w") as f:
+            writer = csv.writer(f)
+            writer.writerows(val)
+
+    for key, val in start_of_year_pitcher_elos.items():
+        with open(f"yearly_elo_data/pitcher/{key}.csv", "w") as f:
+            writer = csv.writer(f)
+            writer.writerows(val)
 
 
 if __name__ == "__main__":
