@@ -7,9 +7,7 @@ import pandas as pd
 import tqdm
 
 from apply_elo import apply_elo
-
-start_data_year = 1913
-end_data_year = 2022
+from config import end_data_year, start_data_year
 
 
 # IBBs are included but they're worth 1/3 of a UBB

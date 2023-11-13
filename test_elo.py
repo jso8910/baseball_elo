@@ -7,9 +7,7 @@ import pandas as pd
 import tqdm
 
 from apply_elo import K_VALUE, elo_error
-
-start_data_year = 1913
-end_data_year = 2022
+from config import end_data_year, start_data_year
 
 
 def test_elo(plays):

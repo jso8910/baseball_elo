@@ -6,8 +6,7 @@ import sys
 import pandas as pd
 import tqdm
 
-end_data_year = 2022
-start_data_year = 1913
+from config import end_data_year, start_data_year
 
 
 def calc_woba_weights(plays):  # type: ignore
