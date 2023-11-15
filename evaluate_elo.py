@@ -185,8 +185,7 @@ def main(start_year: int, end_year: int):
     plays["date"] = plays["GAME_ID"].apply(
         lambda x: datetime.datetime.fromisoformat(x[3:-1])
     )
-    plays.sort_values("date", ascending=True)
-    # plays = sorted(plays, key=lambda x: x["GAME_ID"][3:])
+    plays.sort_values("date", ascending=True, inplace=True)
     (
         batter_elos,
         pitcher_elos,
